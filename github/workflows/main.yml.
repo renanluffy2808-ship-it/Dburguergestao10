@@ -1,0 +1,46 @@
+name: Extrair Projeto D Burger
+
+on:
+workflow_dispatch:
+push:
+paths:
+- '*.zip'
+
+permissions:
+contents: write
+
+jobs:
+extrair:
+runs-on: ubuntu-latest
+steps:
+- name: Baixar arquivos do repositorio
+uses: actions/checkout@v4
+with:
+persist-credentials: true
+
+  - name: Extrair projeto
+    run: |
+      ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+      if [ -z "$ZIP" ]; then
+        echo "Nenhum ZIP encontrado na raiz do repositorio."
+        exit 1
+      fi
+      mkdir -p /tmp/dburger
+      unzip -oq "$ZIP" -d /tmp/dburger
+      ROOT=$(find /tmp/dburger -name package.json -type f | head -n 1)
+      if [ -z "$ROOT" ]; then
+        echo "Nao encontrei package.json dentro do ZIP."
+        exit 1
+      fi
+      ROOT=$(dirname "$ROOT")
+      cp -a "$ROOT"/. .
+      rm -rf node_modules
+      rm -f ./*.zip
+
+  - name: Salvar arquivos extraidos no GitHub
+    run: |
+      git config user.name "github-actions[bot]"
+      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      git add -A
+      git diff --cached --quiet || git commit -m "Extrai projeto atualizado da D Burger"
+      git push
