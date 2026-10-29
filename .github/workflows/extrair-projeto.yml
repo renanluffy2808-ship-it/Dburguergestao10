@@ -1,4 +1,3 @@
-
 name: Extrair Projeto D Burger
 
 on:
@@ -18,23 +17,20 @@ jobs:
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
-      - name: Extrair projeto do ZIP
+      - name: Extrair projeto
         shell: bash
         run: |
           set -e
-
-          ZIP=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
-
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
           if [ -z "$ZIP" ]; then
-            echo "ERRO: nenhum ZIP encontrado na raiz."
+            echo "ERRO: ZIP nao encontrado na raiz."
             exit 1
           fi
 
           mkdir -p /tmp/dburger
           unzip -oq "$ZIP" -d /tmp/dburger
 
-          ROOT=$(find /tmp/dburger -maxdepth 5 \
-            -type f -name package.json \
+          ROOT=$(find /tmp/dburger -type f -name package.json \
             -exec sh -c '
               for f do
                 d="${f%/*}"
@@ -46,35 +42,20 @@ jobs:
             ' sh {} + | head -n 1)
 
           if [ -z "$ROOT" ]; then
-            echo "ERRO: nao encontrei package.json junto com render.yaml."
-            find /tmp/dburger -maxdepth 3 -type f \
-              \( -name package.json -o -name render.yaml \)
+            echo "ERRO: package.json e render.yaml nao encontrados juntos."
             exit 1
           fi
 
-          echo "Projeto encontrado em: $ROOT"
-
-          rsync -a \
-            --exclude='.git/' \
-            "$ROOT"/ ./
-
+          rsync -a --exclude='.git/' "$ROOT"/ ./
           test -f package.json
           test -f render.yaml
-          test -f server.ts || {
-            echo "AVISO: server.ts nao esta na raiz."
-          }
+          echo "Extracao concluida."
 
-          echo "Arquivos extraidos e conferidos."
-
-      - name: Salvar arquivos no GitHub
+      - name: Salvar no repositorio
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || \
-            git commit -m "Extrai projeto atualizado da D Burger"
-
+          git diff --cached --quiet || git commit -m "Extrai projeto D Burger"
           git push
           
